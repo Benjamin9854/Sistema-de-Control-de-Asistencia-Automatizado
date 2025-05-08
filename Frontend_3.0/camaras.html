@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cámaras</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+        }
+        .sidebar {
+            width: 220px;
+            min-height: 100vh;
+            background-color: #343a40;
+            padding: 15px;
+        }
+        .sidebar a {
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .sidebar a:hover {
+            text-decoration: none;
+            background-color: rgba(255,255,255,0.2);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .action-btns {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        <nav class="sidebar text-white">
+            <h4 class="text-center">Menú</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a href="camaras.html" class="nav-link">📷 Cámaras</a></li>
+                <li class="nav-item"><a href="horarios.html" class="nav-link">⏰ Horarios</a></li>
+                <li class="nav-item"><a href="historial.html" class="nav-link">📋 Historial</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-danger" onclick="cerrarSesion()">🚪 Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+        <div class="container mt-5">
+            <h2 class="text-center mb-4"><i class="bi bi-camera"></i> Cámaras</h2>
+            <table class="table table-hover table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Sector</th>
+                        <th>WiFi</th>
+                        <th>Contraseña</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="camaras-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Cámara -->
+    <div class="modal fade" id="modalEditarCamara" tabindex="-1" aria-labelledby="modalEditarCamaraLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Cámara</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-editar-camara">
+                        <input type="hidden" id="editar-id">
+                        
+                        <div class="mb-3">
+                            <label for="editar-nombre" class="form-label">Sector</label>
+                            <input type="text" id="editar-nombre" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editar-nombre-wifi" class="form-label">Nombre WiFi</label>
+                            <input type="text" id="editar-nombre-wifi" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editar-contrasena-wifi" class="form-label">Contraseña WiFi</label>
+                            <input type="text" id="editar-contrasena-wifi" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save"></i> Guardar Cambios
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Ver Pacientes de la Cámara -->
+    <div class="modal fade" id="modalVerPacientes" tabindex="-1" aria-labelledby="modalVerPacientesLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Últimos Pacientes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-hover table-bordered table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>RUT</th>
+                                <th>Ingreso</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pacientes-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🛡️ Verifica si hay un token al cargar la página
+        function verificarAutenticacion() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("No tienes autorización. Inicia sesión.");
+                window.location.href = "index.html"; // Redirigir al login
+            }
+        }
+
+        async function cargarCamaras() {
+            verificarAutenticacion();
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/camara/', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error("No autorizado");
+                }
+
+                const camaras = await response.json();
+                const tabla = document.getElementById('camaras-table');
+                tabla.innerHTML = '';
+                camaras.forEach(camara => {
+                    tabla.innerHTML += `
+                        <tr>
+                            <td>${camara.id}</td>
+                            <td>${camara.nombre}</td>
+                            <td>${camara.nombre_wifi}</td>
+                            <td>${camara.contrasena_wifi}</td>
+                            <td class="action-btns">
+                                <button class="btn btn-warning" onclick="editarCamara(${camara.id}, '${camara.nombre}', '${camara.nombre_wifi}', '${camara.contrasena_wifi}')">
+                                    <i class="bi bi-pencil-square"></i> Editar
+                                </button>
+                                <button class="btn btn-primary" onclick="verCamara(${camara.id})">
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (error) {
+                alert(error.message);
+                localStorage.removeItem('token');  // Eliminar token si no es válido
+                window.location.href = "index.html";  // Redirigir al login
+            }
+        }
+
+        // 🔄 Función para cerrar sesión
+        function cerrarSesion() {
+            localStorage.removeItem('token');
+            window.location.href = "index.html"; // Redirigir al login
+        }
+
+        // 🛠️ Función para abrir el modal y llenar los campos con la info de la cámara
+        function editarCamara(id, nombre, nombre_wifi, contrasena_wifi) {
+            document.getElementById('editar-id').value = id;
+            document.getElementById('editar-nombre').value = nombre;
+            document.getElementById('editar-nombre-wifi').value = nombre_wifi;
+            document.getElementById('editar-contrasena-wifi').value = contrasena_wifi;
+            new bootstrap.Modal(document.getElementById('modalEditarCamara')).show();
+        }
+
+        // 🛠️ Evento para actualizar la cámara
+        document.getElementById('form-editar-camara').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert("No tienes autorización. Inicia sesión.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            const id = document.getElementById('editar-id').value;
+            const camaraActualizada = {
+                nombre: document.getElementById('editar-nombre').value,
+                nombre_wifi: document.getElementById('editar-nombre-wifi').value,
+                contrasena_wifi: document.getElementById('editar-contrasena-wifi').value
+            };
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/camara/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`  // 🔐 Incluir token de autenticación
+                    },
+                    body: JSON.stringify(camaraActualizada)
+                });
+
+                if (!response.ok) {
+                    throw new Error("Error al actualizar la cámara");
+                }
+
+                alert('✅ Cámara actualizada correctamente');
+                cargarCamaras();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarCamara'));
+                modal.hide();  // ✅ Cerrar correctamente el modal
+
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        });
+
+        // 📌 Función para cargar los pacientes en el modal con botones de eliminación
+        async function verCamara(camaraId) {
+            console.log("Ver cámara ID:", camaraId);
+
+            if (!camaraId) {
+                console.error("Error: camaraId es inválido:", camaraId);
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/paciente/ultimos6/${camaraId}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error("Error al obtener los pacientes");
+
+                const pacientes = await response.json();
+                console.log("Pacientes obtenidos:", pacientes);
+
+                const tabla = document.getElementById('pacientes-table');
+                tabla.innerHTML = ''; // Limpiar tabla antes de agregar nuevos datos
+
+                if (pacientes.length === 0) {
+                    tabla.innerHTML = '<tr><td colspan="3">No hay pacientes registrados</td></tr>';
+                } else {
+                    pacientes.forEach(paciente => {
+                        tabla.innerHTML += `
+                            <tr>
+                                <td>${paciente.nombre}</td>
+                                <td>${paciente.rut}</td>
+                                <td>${paciente.hora_ingreso}</td>
+                                <td>
+                                    <button class="btn btn-danger btn-sm" onclick="eliminarPaciente('${paciente.rut}', ${camaraId}, '${paciente.dia_ingreso}')">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                }
+
+                new bootstrap.Modal(document.getElementById('modalVerPacientes')).show();
+            } catch (error) {
+                console.error("Error al obtener los pacientes:", error);
+                alert("❌ No se pudo cargar la lista de pacientes.");
+            }
+        }
+
+        // ❌ Eliminar paciente
+        async function eliminarPaciente(rut, camaraId, dia_ingreso) {
+            if (!confirm(`⚠️ ¿Estás seguro de eliminar al paciente con RUT: ${rut}?`)) {
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/paciente/${rut}/${dia_ingreso}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error("Error al eliminar el paciente");
+                }
+
+                alert("✅ Paciente eliminado correctamente");
+                verCamara(camaraId); // Recargar la lista de pacientes en el modal
+                const modalPaciente = bootstrap.Modal.getInstance(document.getElementById('modalVerPacientes'));
+                if (modalPaciente) {
+                    modalPaciente.hide();
+                }
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+
+        cargarCamaras(); // Cargar cámaras al inicio
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

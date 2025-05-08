@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+        }
+        .sidebar {
+            width: 220px;
+            min-height: 100vh;
+            background-color: #343a40;
+            padding: 15px;
+        }
+        .sidebar a {
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .sidebar a:hover {
+            text-decoration: none;
+            background-color: rgba(255,255,255,0.2);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .action-btns {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        <nav class="sidebar text-white">
+            <h4 class="text-center">Menú</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a href="camaras.html" class="nav-link">📷 Cámaras</a></li>
+                <li class="nav-item"><a href="horarios.html" class="nav-link">⏰ Horarios</a></li>
+                <li class="nav-item"><a href="historial.html" class="nav-link">📋 Historial</a></li>
+                <li class="nav-item"><a href="index.html" class="nav-link text-danger">🚪 Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+
+        <!-- Contenido Principal -->
+        <div class="container mt-5">
+            <h2 class="text-center">Horarios</h2>
+            
+            <!-- Botón para abrir el modal -->
+            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalCrearHorario">
+                <i class="bi bi-calendar-plus"></i> Crear Horario
+            </button>
+
+            <!-- Tabla de Horarios -->
+            <table class="table table-bordered text-center">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Día</th>
+                        <th>Hora Inicio</th>
+                        <th>Hora Término</th>
+                        <th>Cámara ID</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="horarios-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal de Crear Horario -->
+    <div class="modal fade" id="modalCrearHorario" tabindex="-1" aria-labelledby="modalCrearHorarioLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCrearHorarioLabel">Nuevo Horario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-horario">
+                        <div class="mb-3">
+                            <label for="dia" class="form-label">Día</label>
+                            <select class="form-select" id="dia" required>
+                                <option value="" disabled selected>Seleccione un día</option>
+                                <option>Lunes</option>
+                                <option>Martes</option>
+                                <option>Miércoles</option>
+                                <option>Jueves</option>
+                                <option>Viernes</option>
+                                <option>Sábado</option>
+                                <option>Domingo</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hora-inicio" class="form-label">Hora de Inicio</label>
+                            <select class="form-select" id="hora-inicio" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="hora-termino" class="form-label">Hora de Término</label>
+                            <select class="form-select" id="hora-termino" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="camara-id" class="form-label">ID de Cámara</label>
+                            <input type="number" id="camara-id" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save"></i> Guardar Horario
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal de Editar Horario -->
+    <div class="modal fade" id="modalEditarHorario" tabindex="-1" aria-labelledby="modalEditarHorarioLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Horario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-editar-horario">
+                        <input type="hidden" id="editar-id">
+                        
+                        <div class="mb-3">
+                            <label for="editar-dia" class="form-label">Día</label>
+                            <select class="form-select" id="editar-dia" required>
+                                <option>Lunes</option>
+                                <option>Martes</option>
+                                <option>Miércoles</option>
+                                <option>Jueves</option>
+                                <option>Viernes</option>
+                                <option>Sábado</option>
+                                <option>Domingo</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editar-hora-inicio" class="form-label">Hora de Inicio</label>
+                            <select class="form-select" id="editar-hora-inicio" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editar-hora-termino" class="form-label">Hora de Término</label>
+                            <select class="form-select" id="editar-hora-termino" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editar-camara-id" class="form-label">ID de Cámara</label>
+                            <input type="number" id="editar-camara-id" class="form-control" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-save"></i> Guardar Cambios
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🛠️ Generar opciones de horas en los selectores
+        function generarHoras(selectId) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = ''; // Limpiar antes de llenar
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 30) {
+                    let hora = h.toString().padStart(2, '0');
+                    let minuto = m.toString().padStart(2, '0');
+                    let opcion = `<option>${hora}:${minuto}</option>`;
+                    select.innerHTML += opcion;
+                }
+            }
+        }
+
+        // Inicializar selectores de horas
+        generarHoras('hora-inicio');
+        generarHoras('hora-termino');
+        generarHoras('editar-hora-inicio');
+        generarHoras('editar-hora-termino');
+
+        // 🛡️ Verifica si hay un token antes de cargar horarios
+        function verificarAutenticacion() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("No tienes autorización. Inicia sesión.");
+                window.location.href = "index.html";
+            }
+        }
+
+        // 📅 Cargar horarios desde el backend
+        async function cargarHorarios() {
+            verificarAutenticacion();
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/horario/', {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error("No autorizado");
+                }
+
+                const horarios = await response.json();
+                const tabla = document.getElementById('horarios-table');
+                tabla.innerHTML = '';
+
+                horarios.forEach(horario => {
+                    tabla.innerHTML += `
+                        <tr>
+                            <td>${horario.id}</td>
+                            <td>${horario.dia}</td>
+                            <td>${horario.hora_inicio}</td>
+                            <td>${horario.hora_termino}</td>
+                            <td>${horario.camara_id}</td>
+                            <td>
+                                <button class="btn btn-warning" onclick="editarHorario(${horario.id}, '${horario.dia}', '${horario.hora_inicio}', '${horario.hora_termino}', ${horario.camara_id})">
+                                    <i class="bi bi-pencil-square"></i> Editar
+                                </button>
+                                <button class="btn btn-danger" onclick="eliminarHorario(${horario.id})">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+                localStorage.removeItem('token');  // Eliminar token si no es válido
+                window.location.href = "index.html";
+            }
+        }
+
+        // ✏️ Llenar formulario para editar horario y mostrar modal
+        function editarHorario(id, dia, hora_inicio, hora_termino, camara_id) {
+            document.getElementById('editar-id').value = id;
+            document.getElementById('editar-dia').value = dia;
+            document.getElementById('editar-hora-inicio').value = hora_inicio;
+            document.getElementById('editar-hora-termino').value = hora_termino;
+            document.getElementById('editar-camara-id').value = camara_id;
+
+            new bootstrap.Modal(document.getElementById('modalEditarHorario')).show();
+        }
+
+        // 🆕 Crear nuevo horario
+        document.getElementById('form-horario').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert("No tienes autorización. Inicia sesión.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            const nuevoHorario = {
+                dia: document.getElementById('dia').value,
+                hora_inicio: document.getElementById('hora-inicio').value,
+                hora_termino: document.getElementById('hora-termino').value,
+                camara_id: parseInt(document.getElementById('camara-id').value),
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/horario/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(nuevoHorario)
+                });
+
+                if (!response.ok) {
+                    throw new Error("Error al crear el horario");
+                }
+
+                alert('✅ Horario creado con éxito');
+                document.getElementById('form-horario').reset();
+                cargarHorarios();
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalCrearHorario'));
+                modal.hide();
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        });
+
+        // 🔄 Actualizar horario existente
+        document.getElementById('form-editar-horario').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                alert("No tienes autorización. Inicia sesión.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            const id = document.getElementById('editar-id').value;
+            const horarioActualizado = {
+                dia: document.getElementById('editar-dia').value,
+                hora_inicio: document.getElementById('editar-hora-inicio').value,
+                hora_termino: document.getElementById('editar-hora-termino').value,
+                camara_id: parseInt(document.getElementById('editar-camara-id').value),
+            };
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/horario/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(horarioActualizado)
+                });
+
+                if (!response.ok) {
+                    throw new Error("Error al actualizar el horario");
+                }
+
+                alert('✅ Horario actualizado correctamente');
+                cargarHorarios();
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarHorario'));
+                modal.hide();
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        });
+
+        // ❌ Eliminar horario
+        async function eliminarHorario(id) {
+            if (!confirm('⚠️ ¿Estás seguro de eliminar este horario?')) {
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("No tienes autorización. Inicia sesión.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/horario/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error("Error al eliminar el horario");
+                }
+
+                alert('✅ Horario eliminado correctamente');
+                cargarHorarios();
+            } catch (error) {
+                alert(`❌ Error: ${error.message}`);
+            }
+        }
+
+        // 📅 Cargar horarios al iniciar
+        cargarHorarios();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

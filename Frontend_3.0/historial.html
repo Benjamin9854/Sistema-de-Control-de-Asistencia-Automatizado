@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Pacientes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Estilos de Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/css/bootstrap-datepicker.min.css">
+    
+    <style>
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+            user-select: none;
+        }
+        .sidebar {
+            width: 220px;
+            min-height: 100vh;
+            background-color: #343a40;
+            padding: 15px;
+        }
+        .sidebar a {
+            color: white;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .sidebar a:hover {
+            text-decoration: none;
+            background-color: rgba(255,255,255,0.2);
+            padding: 5px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="d-flex">
+    <nav class="sidebar text-white">
+        <h4 class="text-center">Menú</h4>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a href="camaras.html" class="nav-link">📷 Cámaras</a></li>
+            <li class="nav-item"><a href="horarios.html" class="nav-link">⏰ Horarios</a></li>
+            <li class="nav-item"><a href="historial.html" class="nav-link">📋 Historial</a></li>
+            <li class="nav-item"><a href="index.html" class="nav-link text-danger">🚪 Cerrar Sesión</a></li>
+        </ul>
+    </nav>
+
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">📋 Historial de Pacientes</h2>
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-2">
+                <label for="fecha" class="form-label">Selecciona una fecha:</label>
+                <input type="text" id="fecha" class="form-control datepicker" readonly>
+            </div>
+    
+            <div class="col-md-10 d-flex justify-content-end mt-4 mt-md-0">
+                <button class="btn btn-outline-primary" onclick="exportarAExcel()">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+                </button>
+            </div>
+        </div>
+
+        <table class="table table-hover table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th onclick="ordenarTabla(0)">Nombre</th>
+                    <th>RUT</th>
+                    <th>Fecha</th>
+                    <th onclick="ordenarTabla(3)">Hora</th>
+                </tr>
+            </thead>
+            <tbody id="contenidoTabla">
+                <!-- Filas cargadas dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/js/bootstrap-datepicker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.9.0/dist/locales/bootstrap-datepicker.es.min.js"></script>
+
+<script>
+    const token = localStorage.getItem("token");
+
+    function getFechaHoy() {
+        const hoy = new Date();
+        return hoy.toISOString().slice(0, 10);
+    }
+
+    function cargarPacientes(fecha) {
+        fetch(`http://localhost:8000/pacientes/por-dia/${fecha}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const cuerpo = document.getElementById("contenidoTabla");
+            cuerpo.innerHTML = "";
+            data.forEach(p => {
+                cuerpo.innerHTML += `
+                    <tr>
+                        <td>${p.nombre}</td>
+                        <td>${p.rut}</td>
+                        <td>${p.dia_ingreso}</td>
+                        <td>${p.hora_ingreso}</td>
+                    </tr>
+                `;
+            });
+        });
+    }
+
+    function ordenarTabla(colIndex) {
+        const tabla = document.querySelector("table tbody");
+        const filas = Array.from(tabla.rows);
+        const asc = tabla.getAttribute("data-asc") !== "true";
+
+        filas.sort((a, b) => {
+            const valA = a.cells[colIndex].innerText.toLowerCase();
+            const valB = b.cells[colIndex].innerText.toLowerCase();
+            return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+
+        tabla.innerHTML = "";
+        filas.forEach(f => tabla.appendChild(f));
+        tabla.setAttribute("data-asc", asc);
+    }
+
+    $(document).ready(function () {
+        const hoy = getFechaHoy();
+
+        $('#fecha').datepicker({
+            format: 'yyyy-mm-dd',
+            todayHighlight: true,
+            autoclose: true,
+            language: 'es'
+        }).datepicker('setDate', hoy).on('changeDate', function (e) {
+            cargarPacientes(e.format(0, "yyyy-mm-dd"));
+        });
+
+        cargarPacientes(hoy);
+    });
+
+    function exportarAExcel() {
+        const tabla = document.querySelector("table");
+        const wb = XLSX.utils.book_new();
+
+        // Convertir tabla HTML a hoja de Excel
+        const ws = XLSX.utils.table_to_sheet(tabla, { raw: true });
+
+        // Ajustar estilos simples (títulos en negrita, bordes)
+        const rango = XLSX.utils.decode_range(ws['!ref']);
+        for (let C = rango.s.c; C <= rango.e.c; ++C) {
+            const celdaTitulo = XLSX.utils.encode_cell({ r: 0, c: C });
+            if (ws[celdaTitulo]) {
+                ws[celdaTitulo].s = {
+                    font: { bold: true },
+                    fill: { fgColor: { rgb: "D9E1F2" } },
+                    alignment: { horizontal: "center" }
+                };
+            }
+        }
+
+        XLSX.utils.book_append_sheet(wb, ws, "Historial");
+        XLSX.writeFile(wb, `historial_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>
